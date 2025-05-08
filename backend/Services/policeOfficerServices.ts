@@ -1,0 +1,96 @@
+import bcrypt from "bcryptjs";
+import PoliceOfficer, { IPoliceOfficer } from "../Model/PliceOfficer";
+import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+
+export class PoliceOfficerService {
+
+    async registerPoliceOfficerUser(name: string, contactInfo: string, password: string, station: string, badgeNumber: string): Promise<IPoliceOfficer> {
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser = new PoliceOfficer({
+            name,
+            password: hashedPassword,
+            contactInfo,
+            station,
+            badgeNumber
+        });
+
+        return await newUser.save();
+    }
+    
+    async deletePoliceOfficerUser(userId: string): Promise<{ success: boolean; message: string }> {
+        const user = await PoliceOfficer.findById(userId);
+    
+        if (!user) {
+            throw new Error("User not found");
+        }
+    
+        await user.deleteOne();
+    
+        return { success: true, message: "User deleted successfully" };
+    }
+    
+    async editPoliceOfficerUser(userId: string, updates: Partial<IPoliceOfficer>): Promise<IPoliceOfficer> {
+        const user = await PoliceOfficer.findById(userId);
+
+        if (!user) {
+            throw new Error("User not found");
+        }
+        const updateData = {} 
+        if(updates.station) {
+            updates.station;
+        }
+        if(updates.contactInfo) {
+            updates.contactInfo;
+        }
+
+        if (updates.password) {
+            updates.password = await bcrypt.hash(updates.password, 10);
+        }
+
+        Object.assign(user, updates);
+        await user.save();
+
+        return user;
+    }
+    async getAllPoliceOfficers(){
+        const officers = await PoliceOfficer.find()
+        if(!officers){
+            throw new Error("There are no Police officers by that ID");
+        }
+        return officers;
+    }
+
+    async loginPoliceOfficer(badgeNumber: string, password: string): Promise<{ token: string; userType: string; userId: string; name: string; contactInfo: string; station: string; badgeNumber: string }>  {
+        const user = await PoliceOfficer.findOne({ badgeNumber }) as IPoliceOfficer | null;
+        if (!user) {
+            throw new Error("User not found");
+        }
+    
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            throw new Error("Invalid credentials");
+        }
+    
+        const token = jwt.sign({ id: (user._id as mongoose.Types.ObjectId).toString(), badgeNumber: user.badgeNumber }, process.env.JWT_SECRET || "default_secret", {
+            expiresIn: "1h",
+        });
+    
+        const response = {
+            token,
+            userType: "PoliceOfficer",
+            userId: (user._id as mongoose.Types.ObjectId).toString(),
+            name: user.name,
+            contactInfo: user.contactInfo,
+            station: user.station || "N/A",
+            badgeNumber: user.badgeNumber
+        };
+    
+        return response;
+    }
+    
+    
+
+}
+
