@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -12,41 +12,54 @@ import {
   Paper,
   IconButton,
   Chip,
+  CircularProgress,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import COLORS from "../../utils/Colors";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const NormalFines = () => {
   const navigate = useNavigate();
+  const [fines, setFines] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Sample data - replace with your actual data
-  const fines = [
-    {
-      id: 1,
-      offence: "Drive without Helmet",
-      nature: "low",
-      type: "Normal",
-      fineamount: "Rs. 1000",
-      category: "Normal Fines",
-      status: "Pending",
-      date: "2024-03-15",
-    },
-    {
-      id: 2,
-      offence: "Speeding",
-      nature: "medium",
-      type: "Normal",
-      fineamount: "Rs. 2000",
-      category: "Normal Fines",
-      status: "Paid",
-      date: "2024-03-14",
-    },
-  ];
+  useEffect(() => {
+    const fetchFines = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/fine/all");
+        // Filter only normal fines
+        const normalFines = response.data.data.filter(
+          (fine) => fine.type?.toLowerCase() === "normal"
+        );
+        setFines(normalFines);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching fines:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchFines();
+  }, []);
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5000/fine/${id}`);
+      // Refresh the fines list after deletion
+      const response = await axios.get("http://localhost:5000/fine/all");
+      const normalFines = response.data.filter(
+        (fine) => fine.type?.toLowerCase() === "normal"
+      );
+      setFines(normalFines);
+    } catch (error) {
+      console.error("Error deleting fine:", error);
+    }
+  };
 
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "pending":
         return "warning";
       case "paid":
@@ -59,7 +72,7 @@ const NormalFines = () => {
   };
 
   const getNatureColor = (nature) => {
-    switch (nature.toLowerCase()) {
+    switch (nature?.toLowerCase()) {
       case "low":
         return COLORS.lightBlue;
       case "medium":
@@ -70,6 +83,21 @@ const NormalFines = () => {
         return COLORS.greyColor;
     }
   };
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "400px",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 4 }}>
@@ -118,21 +146,19 @@ const NormalFines = () => {
               <TableCell sx={{ color: "#fff" }}>Nature</TableCell>
               <TableCell sx={{ color: "#fff" }}>Type</TableCell>
               <TableCell sx={{ color: "#fff" }}>Fine Amount</TableCell>
-              <TableCell sx={{ color: "#fff" }}>Date</TableCell>
-              <TableCell sx={{ color: "#fff" }}>Status</TableCell>
               <TableCell sx={{ color: "#fff" }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {fines.map((fine, index) => (
               <TableRow
-                key={fine.id}
+                key={fine._id || index}
                 sx={{
                   bgcolor: index % 2 === 0 ? COLORS.white : "#f8f9fa",
                   "&:hover": { bgcolor: "#f5f5f5" },
                 }}
               >
-                <TableCell sx={{ color: COLORS.black }}>{fine.id}</TableCell>
+                <TableCell sx={{ color: COLORS.black }}>{fine._id}</TableCell>
                 <TableCell sx={{ color: COLORS.black }}>
                   {fine.offence}
                 </TableCell>
@@ -148,25 +174,21 @@ const NormalFines = () => {
                 </TableCell>
                 <TableCell sx={{ color: COLORS.black }}>{fine.type}</TableCell>
                 <TableCell sx={{ color: COLORS.black }}>
-                  {fine.fineamount}
-                </TableCell>
-                <TableCell sx={{ color: COLORS.black }}>{fine.date}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={fine.status}
-                    color={getStatusColor(fine.status)}
-                    sx={{ fontWeight: 600 }}
-                  />
+                  Rs. {fine.fine}
                 </TableCell>
                 <TableCell>
                   <IconButton
                     size="small"
                     color="primary"
-                    onClick={() => navigate(`/editFines/${fine.id}`)}
+                    onClick={() => navigate(`/editFines/${fine._id}`)}
                   >
                     <EditIcon />
                   </IconButton>
-                  <IconButton size="small" color="error">
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => handleDelete(fine._id)}
+                  >
                     <DeleteIcon />
                   </IconButton>
                 </TableCell>

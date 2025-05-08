@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -12,46 +12,55 @@ import {
   Paper,
   IconButton,
   Chip,
+  CircularProgress,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import GavelIcon from "@mui/icons-material/Gavel";
 import COLORS from "../../utils/Colors";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const CourtFines = () => {
   const navigate = useNavigate();
+  const [courtFines, setCourtFines] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Sample data - replace with your actual data
-  const courtFines = [
-    {
-      id: 1,
-      caseNumber: "CT-2024-001",
-      offence: "Drunk Driving",
-      nature: "high",
-      type: "Court",
-      fineamount: "Rs. 25000",
-      courtDate: "2024-04-15",
-      description: "Driving under influence of alcohol",
-      status: "Scheduled",
-      judge: "Hon. Smith",
-    },
-    {
-      id: 2,
-      caseNumber: "CT-2024-002",
-      offence: "Reckless Driving",
-      nature: "high",
-      type: "Court",
-      fineamount: "Rs. 15000",
-      courtDate: "2024-04-20",
-      description: "Endangering public safety",
-      status: "Pending",
-      judge: "Hon. Johnson",
-    },
-  ];
+  useEffect(() => {
+    const fetchFines = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/fine/all");
+        // Filter only court fines
+        const courtFinesData = response.data.data.filter(
+          (fine) => fine.type?.toLowerCase() === "court"
+        );
+        setCourtFines(courtFinesData);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching court fines:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchFines();
+  }, []);
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5000/fine/${id}`);
+      // Refresh the fines list after deletion
+      const response = await axios.get("http://localhost:5000/fine/all");
+      const courtFinesData = response.data.data.filter(
+        (fine) => fine.type?.toLowerCase() === "court"
+      );
+      setCourtFines(courtFinesData);
+    } catch (error) {
+      console.error("Error deleting fine:", error);
+    }
+  };
 
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "scheduled":
         return "primary";
       case "completed":
@@ -64,7 +73,7 @@ const CourtFines = () => {
   };
 
   const getNatureColor = (nature) => {
-    switch (nature.toLowerCase()) {
+    switch (nature?.toLowerCase()) {
       case "low":
         return COLORS.lightBlue;
       case "medium":
@@ -75,6 +84,21 @@ const CourtFines = () => {
         return COLORS.greyColor;
     }
   };
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "400px",
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 4 }}>
@@ -121,27 +145,30 @@ const CourtFines = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: COLORS.bgBlue }}>
+              <TableCell sx={{ color: "#fff" }}>ID</TableCell>
               <TableCell sx={{ color: "#fff" }}>Case Number</TableCell>
               <TableCell sx={{ color: "#fff" }}>Offence</TableCell>
               <TableCell sx={{ color: "#fff" }}>Nature</TableCell>
               <TableCell sx={{ color: "#fff" }}>Fine Amount</TableCell>
-              <TableCell sx={{ color: "#fff" }}>Court Date</TableCell>
-              <TableCell sx={{ color: "#fff" }}>Judge</TableCell>
-              <TableCell sx={{ color: "#fff" }}>Status</TableCell>
+              <TableCell sx={{ color: "#fff" }}>Fine Number</TableCell>
               <TableCell sx={{ color: "#fff" }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {courtFines.map((fine, index) => (
               <TableRow
-                key={fine.id}
+                key={fine._id || index}
                 sx={{
                   bgcolor: index % 2 === 0 ? COLORS.white : "#f8f9fa",
                   "&:hover": { bgcolor: "#f5f5f5" },
                 }}
               >
+                <TableCell sx={{ color: COLORS.black }}>{fine._id}</TableCell>
                 <TableCell sx={{ color: COLORS.black }}>
-                  {fine.caseNumber}
+                  {fine.caseNumber ||
+                    `CT-${new Date().getFullYear()}-${String(
+                      index + 1
+                    ).padStart(3, "0")}`}
                 </TableCell>
                 <TableCell sx={{ color: COLORS.black }}>
                   {fine.offence}
@@ -157,28 +184,24 @@ const CourtFines = () => {
                   />
                 </TableCell>
                 <TableCell sx={{ color: COLORS.black }}>
-                  {fine.fineamount}
+                  Rs. {fine.fine}
                 </TableCell>
                 <TableCell sx={{ color: COLORS.black }}>
-                  {fine.courtDate}
-                </TableCell>
-                <TableCell sx={{ color: COLORS.black }}>{fine.judge}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={fine.status}
-                    color={getStatusColor(fine.status)}
-                    sx={{ fontWeight: 600 }}
-                  />
+                  {fine.fineNumber || "-"}
                 </TableCell>
                 <TableCell>
                   <IconButton
                     size="small"
                     color="primary"
-                    onClick={() => navigate(`/editFines/${fine.id}`)}
+                    onClick={() => navigate(`/editFines/${fine._id}`)}
                   >
                     <EditIcon />
                   </IconButton>
-                  <IconButton size="small" color="error">
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => handleDelete(fine._id)}
+                  >
                     <DeleteIcon />
                   </IconButton>
                 </TableCell>

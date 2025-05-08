@@ -75,7 +75,7 @@ const DriverLoginPage = () => {
         localStorage.setItem("token", token);
         localStorage.setItem("isAdmin", JSON.stringify(false));
         localStorage.setItem("isAuthenticated", "true");
-        navigate("/handlePage", { replace: true });
+        navigate("/driver-dashboard", { replace: true });
       } else {
         setError(response.data.message || "Login failed");
       }

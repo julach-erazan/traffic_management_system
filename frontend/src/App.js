@@ -22,7 +22,8 @@ import { Reports } from './view/Reports/Reports';
 import FinesDetails from './view/FinesManagement/FinesDetails';
 import EditFines from './view/FinesManagement/EditFines';
 import PageHandling from './utils/PageHandling';
-import FineIssureForm from './view/FineIssureForm/FineIssureForm';
+import FineIssureForm from './view/Driver/FineIssureForm';
+import DriverPage from './view/Driver/DriverPage';
 import Home from './view/home/Home';
 import { ThemeProvider } from '@mui/material/styles';
 import { theme } from './utils/theme';
@@ -49,6 +50,11 @@ function App() {
               <Route path='/register' element={<RegisterPage />} />
 
               {/* Protected Routes */}
+              <Route path='/driver-dashboard' element={
+                <ProtectedRoute>
+                  <DriverPage />
+                </ProtectedRoute>
+              } />
               <Route path='/handlePage' element={
                 <ProtectedRoute>
                   <PageHandling />
